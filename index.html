@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Unwritten Volume</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-25..0" />
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#D42426",       
+                        "primary-dark": "#a31618",
+                        "primary-green": "#165B33", 
+                        "primary-gold": "#C5A059",  
+                        "book-bg": "#202020",
+                        "paper": "#F4F1EA", // Premium Cream Paper
+                        "ink": "#2D2A26"
+                    },
+                    fontFamily: {
+                        "landing": ["Plus Jakarta Sans", "sans-serif"],
+                        "book": ["Cormorant Garamond", "serif"],
+                        "sans": ["Montserrat", "sans-serif"]
+                    },
+                    animation: {
+                        'spin-slow': 'spin 8s linear infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'fade-out': 'fadeOut 0.8s ease-in-out forwards',
+                        'page-in': 'pageIn 0.6s ease-out forwards',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        fadeOut: {
+                            '0%': { opacity: '1', transform: 'scale(1)' },
+                            '100%': { opacity: '0', transform: 'scale(1.05)', visibility: 'hidden' },
+                        },
+                        pageIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                },
+            },
+        }
+    </script>
+
+    <style>
+        /* --- GLOBAL & UTILS --- */
+        body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        .hidden-force { display: none !important; }
+        
+        /* --- CUSTOM SCROLLBAR --- */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d6d3c9; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #C5A059; }
+
+        /* --- PAPER TEXTURE EFFECT --- */
+        .texture-paper {
+            background-color: #F4F1EA;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+        }
+
+        /* --- BOOK DEPTH & SHADOWS --- */
+        .book-shadow {
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.5), /* Deep shadow */
+                0 0 0 1px rgba(0,0,0,0.02), /* Border definition */
+                5px 0 0 0 #efebe2,  /* Page Stack 1 */
+                10px 0 0 0 #e8e4db, /* Page Stack 2 */
+                15px 0 0 0 #e0dccc; /* Page Stack 3 */
+        }
+
+        .spine-crease {
+            /* Realistic shadow curving into the binding */
+            background: linear-gradient(to right, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 15%, rgba(0,0,0,0) 100%);
+            pointer-events: none;
+        }
+
+        /* --- POLAROID IMAGE STYLE --- */
+        .book-photo-container {
+            background: white;
+            padding: 12px 12px 30px 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transform: rotate(-1deg);
+            transition: transform 0.4s ease;
+            display: inline-block;
+        }
+        .book-photo-container:hover {
+            transform: rotate(0deg) scale(1.02);
+            z-index: 10;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .book-photo {
+            filter: sepia(15%) contrast(95%);
+            display: block;
+        }
+
+        /* --- TYPOGRAPHY --- */
+        .chapter-body-text {
+            font-size: 1.15rem; 
+            line-height: 1.9;
+            text-align: justify;
+            color: #2D2A26;
+        }
+
+        /* PREMIUM DROP CAP */
+        .drop-cap-style::first-letter {
+            float: left;
+            font-size: 4rem;
+            line-height: 0.85;
+            margin-right: 0.15em;
+            margin-top: 0.05em;
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 700;
+            color: #D42426; 
+        }
+
+        /* --- BACKGROUND FLOATING PARTICLES (CSS ONLY) --- */
+        .particles {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .particle {
+            position: absolute;
+            width: 6px; height: 6px;
+            background: rgba(212, 36, 38, 0.1); /* Faint red */
+            border-radius: 50%;
+            animation: floatUp 15s linear infinite;
+        }
+        .particle:nth-child(1) { left: 10%; width: 10px; height: 10px; animation-duration: 20s; animation-delay: 0s; }
+        .particle:nth-child(2) { left: 30%; width: 5px; height: 5px; animation-duration: 25s; animation-delay: 2s; background: rgba(22, 91, 51, 0.1); }
+        .particle:nth-child(3) { left: 70%; width: 8px; height: 8px; animation-duration: 18s; animation-delay: 5s; background: rgba(197, 160, 89, 0.15); }
+        .particle:nth-child(4) { left: 90%; width: 12px; height: 12px; animation-duration: 30s; animation-delay: 1s; }
+        
+        @keyframes floatUp {
+            0% { transform: translateY(100vh) scale(0.8); opacity: 0; }
+            20% { opacity: 1; }
+            100% { transform: translateY(-10vh) scale(1.2); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="min-h-screen overflow-x-hidden relative bg-[#FDFBF7]">
+
+    <audio id="bg-music" loop>
+        <source src="fallingforyou.mp3" type="audio/mpeg">
+    </audio>
+
+    <button onclick="toggleMusic()" class="fixed bottom-6 right-6 z-[999] bg-white/90 p-3 rounded-full shadow-xl backdrop-blur-sm border border-primary-gold/30 text-primary-gold hover:scale-110 hover:border-primary-gold transition-all group active:scale-95">
+        <span id="music-icon" class="material-symbols-outlined text-[24px]">music_off</span>
+    </button>
+
+    <div id="landing-section" class="fixed inset-0 z-50 bg-[#FDFBF7] flex flex-col items-center justify-center font-landing text-center px-4 transition-all duration-1000">
+        
+        <div class="particles">
+            <div class="particle"></div><div class="particle"></div><div class="particle"></div><div class="particle"></div>
+        </div>
+
+        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-primary-gold to-primary-green"></div>
+        
+        <div class="relative mb-10 animate-float">
+            <div class="absolute inset-0 bg-primary-gold/20 blur-xl rounded-full"></div>
+            <div class="relative flex h-24 w-24 items-center justify-center rounded-full bg-white ring-1 ring-primary-gold/30 shadow-lg">
+                <span class="material-symbols-outlined text-primary-gold text-5xl">auto_stories</span>
+            </div>
+        </div>
+
+        <h1 class="text-5xl md:text-7xl font-extrabold text-primary-green mb-6 tracking-tight drop-shadow-sm">
+            The Unwritten <span class="text-primary italic font-book">Volume</span>
+        </h1>
+
+        <p class="text-gray-500 text-lg md:text-xl max-w-lg mb-14 leading-relaxed font-light">
+            A collection of moments, quiet observations, and things I never said out loud. <br>
+            <span class="text-primary-gold font-bold italic font-book text-2xl mt-4 block">For Sai :D</span>
+        </p>
+
+        <button onclick="openUnlockModal()" class="group relative bg-[#0F291E] text-white px-12 py-4 rounded-full font-semibold text-lg shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 overflow-hidden">
+            <span class="relative z-10">Unlock This Book</span>
+            <span class="material-symbols-outlined group-hover:rotate-12 transition-transform relative z-10">lock</span>
+            <div class="absolute top-0 -left-full w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:left-full transition-all duration-700 ease-in-out"></div>
+        </button>
+
+        <p class="mt-12 text-[10px] text-gray-400 uppercase tracking-[0.3em] font-sans">Strictly Confidential</p>
+    </div>
+
+    <div id="security-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-[#0F291E]/90 backdrop-blur-md transition-all duration-500 opacity-0">
+        <div class="bg-white p-10 rounded-[2rem] max-w-sm w-full mx-4 shadow-2xl transform scale-90 transition-all duration-300 relative border border-white/20 font-landing">
+            
+            <button onclick="closeUnlockModal()" class="absolute top-5 right-5 text-gray-400 hover:text-primary transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+
+            <div class="text-center space-y-5">
+                <div class="w-14 h-14 bg-primary/5 rounded-full flex items-center justify-center mx-auto text-primary mb-2 border border-primary/10">
+                    <span class="material-symbols-outlined text-2xl">encrypted</span>
+                </div>
+                
+                <h3 class="text-2xl font-bold text-primary-green">Security Check</h3>
+                <p class="text-sm text-gray-500 leading-relaxed px-2">
+                    What day was the first time you came to our house, accompanied me to buy ingredients, rode a jeep with me, and when I was admiring you while you admired the sky?
+                </p>
+                
+                <input id="password-input" type="text" class="w-full h-14 px-4 bg-[#fcfbf9] border border-primary-green/20 rounded-xl text-center outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-black font-bold tracking-widest text-lg placeholder:font-normal placeholder:tracking-normal" placeholder="00-00-00-00">
+                
+                <button onclick="checkPassword()" class="w-full py-4 bg-primary text-white rounded-xl font-bold shadow-lg hover:bg-primary-dark hover:shadow-xl transition-all active:scale-95">
+                    Open Book
+                </button>
+                
+                <p id="error-msg" class="text-red-500 text-xs font-bold hidden animate-pulse">Wrong answer! Try again. 😜</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-book-container" class="hidden-force min-h-screen flex items-center justify-center p-4 md:p-8 bg-book-bg fade-in">
+        
+        <div class="relative w-full max-w-3xl h-[85vh] md:h-[90vh] texture-paper shadow-2xl rounded-r-lg rounded-l-[4px] overflow-hidden flex flex-row book-shadow border-l border-stone-400/30">
+            
+            <div class="hidden md:flex w-14 h-full bg-[#E6E2D6] border-r border-stone-300 relative shrink-0 items-end justify-center pb-12 z-20 shadow-inner">
+                <div class="transform -rotate-90 text-stone-400 text-[10px] tracking-[0.25em] uppercase whitespace-nowrap font-sans font-bold opacity-50">
+                    &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;The Unwritten Volume
+                </div>
+            </div>
+    
+            <div class="flex-1 flex flex-col relative h-full overflow-hidden font-book texture-paper">
+                
+                <div class="absolute top-0 left-0 w-16 h-full spine-crease z-10"></div>
+
+                <div class="h-24 flex items-center justify-between px-8 md:px-12 pt-6 z-20">
+                    <button onclick="goToTableOfContents()" class="text-stone-400 hover:text-primary transition duration-300 sans text-[11px] tracking-widest uppercase font-bold flex items-center gap-1 group">
+                        <span class="group-hover:-translate-x-1 transition-transform">←</span> Index
+                    </button>
+                    <div id="chapter-indicator" class="text-stone-400 sans text-[9px] tracking-[0.2em] uppercase opacity-0 transition-opacity duration-500 font-bold">
+                    </div>
+                </div>
+    
+                <div id="content-area" class="flex-1 overflow-y-auto px-8 md:px-16 py-2 text-lg md:text-xl leading-loose scroll-smooth z-0 relative">
+                    </div>
+    
+                <div class="h-24 flex items-center justify-between px-8 md:px-12 border-t border-stone-200/50 z-20 relative">
+                    <button id="prev-btn" onclick="prevPage()" class="opacity-0 pointer-events-none text-stone-400 hover:text-stone-800 transition sans text-[11px] tracking-widest uppercase font-bold flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">arrow_back</span> Prev
+                    </button>
+                    
+                    <span id="page-number" class="text-stone-300 sans text-[9px] tracking-widest uppercase font-bold">Cover</span>
+                    
+                    <button id="next-btn" onclick="nextPage()" class="text-stone-500 hover:text-primary transition sans text-[11px] tracking-widest uppercase font-bold flex items-center gap-2 group">
+                        Next <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const SECRET_ANSWER = "31-12-16-23";
+
+        // --- MUSIC LOGIC ---
+        const music = document.getElementById('bg-music');
+        const musicIcon = document.getElementById('music-icon');
+        music.volume = 0.05; // 5% Volume
+        let isPlaying = false;
+
+        function toggleMusic() {
+            if (isPlaying) {
+                music.pause();
+                musicIcon.innerText = 'music_off';
+                musicIcon.parentElement.classList.remove('animate-spin-slow');
+                musicIcon.parentElement.classList.remove('border-primary-gold');
+                musicIcon.parentElement.classList.add('border-primary-gold/30');
+            } else {
+                music.play().then(() => {
+                    musicIcon.innerText = 'music_note';
+                    musicIcon.parentElement.classList.add('animate-spin-slow');
+                    musicIcon.parentElement.classList.add('border-primary-gold');
+                    musicIcon.parentElement.classList.remove('border-primary-gold/30');
+                }).catch(e => console.log("Audio interaction required"));
+            }
+            isPlaying = !isPlaying;
+        }
+
+        // --- MODAL LOGIC ---
+        const landingSection = document.getElementById('landing-section');
+        const modal = document.getElementById('security-modal');
+        const bookContainer = document.getElementById('main-book-container');
+        const errorMsg = document.getElementById('error-msg');
+        const passwordInput = document.getElementById('password-input');
+
+        function openUnlockModal() {
+            if (!isPlaying) toggleMusic();
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-90');
+                modal.querySelector('div').classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeUnlockModal() {
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-90');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                errorMsg.classList.add('hidden');
+                passwordInput.value = '';
+            }, 300);
+        }
+
+        function checkPassword() {
+            const input = passwordInput.value.trim().toLowerCase();
+            if (input === SECRET_ANSWER) {
+                closeUnlockModal();
+                landingSection.classList.add('animate-fade-out');
+                
+                // Burst Confetti
+                const duration = 2000;
+                const end = Date.now() + duration;
+
+                (function frame() {
+                    confetti({
+                        particleCount: 5,
+                        angle: 60,
+                        spread: 55,
+                        origin: { x: 0 },
+                        colors: ['#D42426', '#165B33', '#F8B229']
+                    });
+                    confetti({
+                        particleCount: 5,
+                        angle: 120,
+                        spread: 55,
+                        origin: { x: 1 },
+                        colors: ['#D42426', '#165B33', '#F8B229']
+                    });
+                    if (Date.now() < end) {
+                        requestAnimationFrame(frame);
+                    }
+                }());
+
+                setTimeout(() => {
+                    landingSection.classList.add('hidden-force');
+                    bookContainer.classList.remove('hidden-force');
+                    renderPage(0);
+                }, 800);
+
+            } else {
+                errorMsg.classList.remove('hidden');
+                passwordInput.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+                setTimeout(() => passwordInput.classList.remove('border-red-500', 'ring-1', 'ring-red-500'), 500);
+            }
+        }
+
+        // --- STORY DATA ---
+        const story = [
+            {
+                type: "cover",
+                title: "The Unwritten Volume",
+                subtitle: "A story of quiet observation",
+                dedication: "For <strong>Sai</strong>, always.<br>Even when I don't say it loud enough.",
+                id: 0   
+            },
+            {
+                type: "toc",
+                title: "Table of Contents",
+                chapters: [
+                    { title: "I. The Moment the World Went Quiet", pageIndex: 2 },
+                    { title: "II. After I Knew", pageIndex: 3 }, 
+                    { title: "III. The Moments Between Words", pageIndex: 5 }, 
+                    { title: "IV. When Walls Fade", pageIndex: 7 }, 
+                    { title: "V. The Moment We Became Us", pageIndex: 9 }, 
+                    { title: "VI. Letter", pageIndex: 10 },
+                    { title: "VII. A Note From Ree", pageIndex: 13 }
+                ],
+                id: 1
+            },
+            {
+                // CHAPTER 1
+                type: "chapter",
+                chapterTitle: "Chapter I",
+                chapterName: "The Moment the World Went Quiet",
+                isChapterStart: true, 
+                image: "img/realization.png", 
+                imageCaption: "May 29, 2025",
+                text: `There is a distinct line in my memory: life before that night, and life after it. I remember the song I dedicated to you—'Falling for You'—but more than the music, I remember the clarity that hit me while it played. It wasn't a gradual slide; it was a sudden, gravity-defying drop. In that moment, looking at you, the noise of the world faded out, and I knew. I realized I didn't just want to know you; I wanted to be yours. `,
+                id: 2
+            },
+            // CHAPTER 2
+            {
+                type: "chapter",
+                chapterTitle: "Chapter II",
+                chapterName: "After I Knew",
+                isChapterStart: true,
+                text: `The world kept moving at its usual pace. Days passed. Conversations stayed casual. 
+                I still laughed at the same jokes, walked the same streets, lived inside the same routine. 
+                But somewhere in the middle of all that normal, you had taken up residence in my thoughts. <br> <br> 
+                It wasn’t obvious at first. It showed up in small ways. In how I noticed the time more 
+                carefully when I knew I’d see you. In how silence stopped feeling empty when it was 
+                shared with you. <Br> <Br> 
+                I started noticing you differently—not because I meant to, but because my heart had already chosen you. <br> <br> 
+                And in all these small, breathtaking ways, I fell—deeper than I ever thought possible. Nothing was demanded. 
+                Nothing was promised.<br><br>`,
+                id: 3
+            },
+            {
+                type: "chapter",
+                chapterTitle: "Chapter II",
+                chapterName: "After I Knew",
+                isChapterStart: false,
+                text: `
+                And yet, something steady began to grow. A kind of knowing that didn’t rush, 
+                didn’t push—just stayed. <br><br>
+                I didn’t say anything then. I didn’t need to.<br>
+                Because some feelings don’t ask to be announced.<br>
+                They ask to be honored.`,
+                id: 4
+            },
+            // CHAPTER 3
+            {
+                type: "chapter",
+                chapterTitle: "Chapter III",
+                chapterName: "The Moments Between Words",
+                isChapterStart: true,
+                text: `After I began noticing the little things about you, I found myself searching 
+                for more than just glimpses. I wanted the moments between words, the quiet spaces where 
+                you didn’t need to perform or explain. <br> <br>
+                The way your laughter caught me off guard, soft and unguarded, when something silly slipped from your lips. <br> <br>
+                The way your hand brushed mine as we reached for something, and a spark lingered long after. <br>  <br>
+                The way you whispered a secret thought, almost shyly, trusting me with pieces of yourself you gave to no one else. <br> <Br> 
+                I remember you always refused to tell me you were doing your activity because you knew that if I knew, 
+                I would give you time to finish it—`,
+                id: 5
+            },
+            {
+                type: "chapter",
+                chapterTitle: "Chapter III",
+                chapterName: "The Moments Between Words",
+                isChapterStart: false, 
+                text: `and we wouldn’t be able to talk.
+                So instead, you chose not to say anything, just so we could still talk while you worked.
+                 <br><br>
+                Or the times when you were irritated and didn’t want to walk, yet the moment 
+                I invited you along—because I wanted to buy something—you came without hesitation, 
+                like there was no other place you’d rather be. <Br> <Br>
+                I saw the effort you hid in plain sight—the late nights spent perfecting your schoolwork, 
+                the way you stayed up to help a friend without anyone noticing, the quiet weight 
+                you carried without asking for sympathy. <br> <br> 
+                And I realized something: falling for you wasn’t a sudden drop like that first night. 
+                It was slow, patient, a gentle pull toward everything you were, everything you dared to 
+                show me, and everything you kept secret. <br> <br>
+                With every small gesture, every stolen glance, every shared silence, 
+                I felt closer—like I was learning a language only we could speak, 
+                a language made of laughter, warmth, and quiet understanding.`, 
+                id: 6
+            },
+            // CHAPTER 4
+            {
+                type: "chapter",
+                chapterTitle: "Chapter IV",
+                chapterName: "When Walls Fade",
+                isChapterStart: true, 
+                text: `After all the little moments we shared, I began to notice the walls you carried—not the ones you built for the world, but the ones you held close, quietly, for yourself. <br> <br>
+                The way you laughed when I teased you, yet there was a flicker in your eyes that told me you were holding back a storm of thoughts. <Br> <Br>
+                The way you shared pieces of your day, fragments you never offered to anyone else, trusting me to understand the parts you didn’t even say out loud. <br>  <Br>
+                The way you allowed me to love you—to hold your hand when you didn’t even know it would calm you, to hug you after a long day, to rest your head on my shoulder without a word. <Br> <Br>
+                I remember the days when you let me brush your hair back softly, when your tired eyes met mine and you just smiled instead of hiding it.`,
+                id: 7
+            },
+            {
+                type: "chapter",
+                chapterTitle: "Chapter IV",
+                chapterName: "When Walls Fade",
+                isChapterStart: false,
+                text: `The times you leaned into me when we walked together, letting me wrap my arm around you even when the world is watching. <br>  <Br>
+                I saw the moments when you let your guard down—sometimes a fleeting sigh, sometimes a soft laugh after a long day—moments that whispered, I belong here. <Br> <Br>
+                Even the little gestures—the way you accepted my silly surprises, or let me hold every part of you—became your quiet way of saying, I trust you, and I let you in. <br> <br>
+                And I realized that love wasn’t just noticing the brightness in someone, but the shadows too.
+                The tiredness, the frustrations, the quiet insecurities—all of it became a language we learned to speak together. <br> <br>
+                It was in these small, unguarded moments, in your quiet acceptance of my affection, that I felt it most: the subtle shift from simply caring for you, to wanting to hold every part of you.
+                And in that quiet understanding, I knew—what we had was growing into something neither of us could fully put into words, but we both felt it anyway.`,
+                id: 8
+            },
+            // CHAPTER 5
+            {
+                type: "chapter",
+                chapterTitle: "Chapter V",
+                chapterName: "The Moment We Became Us",
+                isChapterStart: true, 
+                text: ` After all our small moments together, there was a point when I realized things had changed. It wasn’t loud or dramatic—it was quiet, almost invisible—but I felt it clearly. <Br> <Br>
+                I noticed how you lingered a little when we said goodbye. How your eyes would search for mine, like you were asking something without saying it.
+                <br> <Br> The little ways you made space for me in your day. How you let me be there, even in the middle of your busy life. 
+                It was the small, everyday things too. The way you let me show I cared, without hesitation. <br> <br> And that’s when I knew. We weren’t just two people spending time together anymore.
+                We had something real. Something quiet but undeniable. Something that made me feel like we were finally us.`,
+                id: 10
+            },
+            // LETTERS
+            {
+                type: "chapter",
+                chapterTitle: "Letter",
+                chapterName: "My Dearest Sai,",
+                isChapterStart: true, 
+                text: `I can’t believe we’re celebrating our second Christmas together. 
+                Just writing this makes me a little emotional. I don’t even know where 
+                to start because I’m feeling so many things at once. When I look back, 
+                I remember how sad, worried, and anxious I was—especially after everything 
+                we went through. There were moments when I wasn’t sure we’d make it here.
+                <br> <br>
+                To be honest, I used to be terrified of the idea of you leaving. 
+                That was my biggest fear—that one day, you’d just walk away. 
+                Do you remember my birthday? I only had one wish, and it wasn’t material. 
+                I wished that you wouldn’t leave me. When you gave me your gifts, 
+                part of me was secretly hoping there’d be some sign inside them that 
+                meant you were staying. And then you actually did. You chose to stay. 
+                I can’t even explain how happy I was that day—you didn’t just make my day, 
+                you made my entire year. It was the only thing I asked the universe for, 
+                and somehow, it answered through you.`,
+                id: 11
+            },
+            {
+                type: "chapter",
+                chapterTitle: "Letter",
+                chapterName: "My Dearest Sai,",
+                isChapterStart: false, 
+                text: `Thank you, Sai. This past year wasn’t easy for us. It was hard, and we went through so many trials. 
+                But just like what you wrote in the book you gave me—not every story is meant to end. 
+                Ours wasn’t. It was meant to continue. And here we are.
+                <br> <br>
+                We’ve achieved so much together, and we’ve grown a lot. Looking back at our memories still 
+                gives me butterflies. I still can’t believe my first kiss was with you. The photobooth, 
+                too—thank you for agreeing to take those pictures with me even though I know you’re not fond of photos. 
+                And our countless dates after class—cheers to many more of those. And of course, our babies—Haru, 
+                Tetsu, Ree, Sai, and Saireese. I love them all. Thank you for every surprise you gave me this year.
+                <br> <br>
+                It still feels unreal—from the time I was just dedicating Pahintulot to you, to now, where I’ve 
+                completely fallen for you. Thank you for letting me into your life. Thank you for trusting me with your heart. 
+                I know opening up doesn’t come easy for you, which is why I treasure that trust more than anything. 
+                Thank you for letting me love you and be part of your world.`,
+                id: 12
+            },
+            {
+                type: "chapter",
+                chapterTitle: "Letter",
+                chapterName: "My Dearest Sai,",
+                isChapterStart: false, 
+                text: `I don’t say this enough, but I truly appreciate you. You’ve made my life so much better, Sai. Everything feels lighter when I’m with you. Thank you for accepting me wholeheartedly, exactly as I am.
+                <br> <br>
+                Please know that I see everything—the efforts you make, even the ones you’re shy to show or think I don’t notice. I see them all, and I’m so grateful for them.
+                <br> <br>
+                You made my college life so much better. You made everything feel bearable. Thank you for always being on my team, for cheering the loudest for my achievements, and for being my strength when I didn’t know where else to find it. When I couldn’t even understand myself, you were there to understand me.
+                <br> <br> 
+                I look forward to our future—to graduating, chasing our individual dreams, and building the life we’ve always talked about. I’m excited for more years of growing with you.
+                <br> <br> 
+                I might not say this all the time, but please don’t ever leave my side. I hope you stay with me always.
+                <br> <br>
+                <b> Merry Christmas, Sai :> I love you, Always, in all ways. </b>`,
+                id: 13
+            },
+            {
+                type: "ending",
+                title: "A Note From Ree",
+                text: ` Just a little warning! I’m not the best with words, and I’m not even sure if everything I wrote here makes perfect sense or is grammatically correct, so please bear with me HADSAHKJDSAKHDAXD. <br> <br> I might stumble over my sentences, overuse commas, or make things sound silly, but every word comes straight from my heart. So even if it’s messy or awkward, I hope you can feel how much I mean it. <Br> <Br> Please don't judge me, hindi ako english major :< <br> <br> Me: At least I tried (sarcism 'to ha hehe mwa:p)
+                `,
+                signature: "— Ree",
+                id: 14
+            }
+        ];
+
+        let currentPageIndex = 0;
+        const contentArea = document.getElementById('content-area');
+        const chapterIndicator = document.getElementById('chapter-indicator');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const pageNum = document.getElementById('page-number');
+
+        function renderPage(index) {
+            // Animation for transition
+            contentArea.classList.remove('animate-page-in');
+            void contentArea.offsetWidth; // Trigger reflow
+            contentArea.classList.add('animate-page-in');
+
+            contentArea.innerHTML = "";
+            const pageData = story[index];
+            
+            let alignmentClass = (pageData.type === 'cover' || pageData.type === 'toc') ? 'justify-center' : 'justify-start';
+            let paddingClass = (pageData.type !== 'cover' && pageData.type !== 'toc') ? 'pt-2' : '';
+
+            let html = `<div class="w-full h-full flex flex-col ${alignmentClass} ${paddingClass}">`;
+
+            if (pageData.type === 'cover') {
+                chapterIndicator.style.opacity = '0';
+                html += `
+                    <div class="text-center mt-10 md:mt-0">
+                        <h1 class="text-4xl md:text-6xl font-bold mb-4 tracking-tight text-stone-800 font-book">${pageData.title}</h1>
+                        <p class="text-xl md:text-2xl text-stone-500 italic mb-12 font-book">${pageData.subtitle}</p>
+                        <div class="w-16 h-1 bg-primary-gold/50 mx-auto mb-12"></div>
+                        <p class="text-lg text-stone-600 font-book italic">${pageData.dedication}</p>
+                    </div>
+                `;
+            } 
+            else if (pageData.type === 'toc') {
+                chapterIndicator.style.opacity = '0';
+                html += `
+                    <div class="text-center">
+                        <h2 class="text-3xl font-semibold mb-12 text-stone-800 tracking-widest uppercase font-sans">${pageData.title}</h2>
+                        <ul class="space-y-6 text-left inline-block">
+                            ${pageData.chapters.map((chap) => `
+                                <li class="cursor-pointer hover:text-primary transition border-b border-stone-200 pb-2 w-full md:w-96 flex justify-between group" onclick="goTo(${chap.pageIndex})">
+                                    <span class="group-hover:translate-x-2 transition-transform duration-300 font-book text-lg text-stone-700">${chap.title}</span>
+                                    <span class="text-stone-400 group-hover:text-stone-600 font-sans text-sm">${chap.pageIndex}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            else if (pageData.type === 'chapter') {
+                chapterIndicator.textContent = pageData.chapterName;
+                chapterIndicator.style.opacity = '1';
+                
+                let headerHtml = '';
+                
+                if (pageData.isChapterStart) {
+                    let imageHtml = '';
+                    if(pageData.image) {
+                        imageHtml = `
+                            <figure class="mb-12 text-center">
+                                <div class="book-photo-container">
+                                    <img src="${pageData.image}" alt="Memory" class="book-photo max-h-48 w-auto object-cover">
+                                </div>
+                                ${pageData.imageCaption ? `<figcaption class="text-xs text-stone-400 mt-4 sans tracking-widest uppercase font-bold">${pageData.imageCaption}</figcaption>` : ''}
+                            </figure>
+                        `;
+                    }
+
+                    headerHtml = `
+                        <div class="mb-14 text-center">
+                            <span class="block text-primary-gold font-book italic text-xl mb-4 tracking-wide">${pageData.chapterTitle}</span>
+                            <h2 class="text-3xl md:text-5xl text-stone-800 font-book font-bold uppercase tracking-widest leading-tight">
+                                ${pageData.chapterName}
+                            </h2>
+                        </div>
+                        ${imageHtml}
+                    `;
+                }
+
+                const dropCapClass = pageData.isChapterStart ? 'drop-cap-style' : '';
+
+                html += `
+                    <div>
+                        ${headerHtml}
+                        <div class="chapter-body-text font-book ${dropCapClass}">
+                            ${pageData.text}
+                        </div>
+                        ${!pageData.isChapterStart ? '' : '<div class="mt-12 flex justify-center text-primary-gold/50 tracking-widest text-lg font-book">&nbsp</div>'}
+                    </div>
+                `;
+            }
+            else if (pageData.type === 'ending') {
+                chapterIndicator.textContent = "Epilogue";
+                chapterIndicator.style.opacity = '1';
+                html += `
+                    <div class="text-center md:text-left pt-10">
+                        <h2 class="text-3xl mb-6 text-stone-800 font-book italic">${pageData.title}</h2>
+                        <div class="chapter-body-text font-book mb-12">
+                            ${pageData.text}
+                        </div>
+                        <p class="text-right font-bold text-stone-600 italic mt-8 font-book text-xl">${pageData.signature}</p>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+            contentArea.innerHTML = html;
+
+            prevBtn.style.opacity = index === 0 ? '0' : '1';
+            prevBtn.style.pointerEvents = index === 0 ? 'none' : 'auto';
+            
+            if (index === story.length - 1) {
+                nextBtn.innerHTML = `Close Book <span class="material-symbols-outlined text-sm ml-1">close</span>`;
+                nextBtn.onclick = function() {
+                    window.opener = null;
+                    window.open("", "_self");
+                    window.close();
+                    if(!window.closed) {
+                         alert("You may now close this tab.");
+                    }
+                };
+            } else {
+                nextBtn.innerHTML = `Next <span class="material-symbols-outlined text-sm ml-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>`;
+                nextBtn.onclick = nextPage;
+            }
+
+            pageNum.textContent = index === 0 ? "Cover" : `Page ${index}`;
+        }
+
+        function nextPage() {
+            if (currentPageIndex < story.length - 1) {
+                currentPageIndex++;
+                renderPage(currentPageIndex);
+            }
+        }
+
+        function prevPage() {
+            if (currentPageIndex > 0) {
+                currentPageIndex--;
+                renderPage(currentPageIndex);
+            }
+        }
+
+        function goTo(index) {
+            currentPageIndex = index;
+            renderPage(currentPageIndex);
+        }
+
+        function goToTableOfContents() {
+            currentPageIndex = 1;
+            renderPage(currentPageIndex);
+        }
+    </script>
+</body>
+</html>
